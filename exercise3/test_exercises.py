@@ -34,7 +34,7 @@ def test_get_transaction():
     block = Block(b"\x00", 0, 0, [transaction])
     chain = Blockchain([block])
 
-    assert chain.get_transaction(transaction.tx_hash) == transaction
+    assert chain.get_transaction_by(tx_hash=transaction.tx_hash) == transaction
 
 
 def test_get_nonexistent_transaction():
@@ -42,7 +42,7 @@ def test_get_nonexistent_transaction():
     block = Block(b"\x00", 0, 0, [transaction])
     chain = Blockchain([block])
 
-    assert chain.get_transaction(tx_hash=b"\x00") is None
+    assert chain.get_transaction_by(tx_hash=b"\x00") is None
 
 
 # Node
@@ -189,7 +189,6 @@ def test_find_nonce():
 
     block = Block(node.blockchain.get_latest_block().hash, 0, 0, [])
     block = node.find_nonce(block)
-
     assert int.from_bytes(block.hash, "big") < MAX_256_INT >> DIFFICULTY
 
 

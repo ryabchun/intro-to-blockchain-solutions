@@ -13,36 +13,30 @@ class Wallet:
         self._private_key = key_pair[1]
 
     def get_unspent_transactions(self, registry: TransactionRegistry) -> List[Transaction]:
-        """
-        TODO: Znajdź wszystkie niewykorzystane transakcje powiązane z tym portfelem.
-        Spośród wszystkich transakcji w rejestrze (registry.transactions), zwróć te z których
-        każda spełnia oba warunki:
-        - odbiorcą transakcji jest klucz publiczny portfela
-        - transakcja nie została wykorzystana (metoda is_transaction_spent w TransactionRegistry)
-        """
-        raise NotImplementedError()
-    
+        unspent_transactions = []
+        for transaction in registry.transactions:
+            if transaction.recipient == self.public_key:
+                if not registry.is_transaction_spent(transaction.tx_hash):
+                    unspent_transactions.append(transaction)
+        return unspent_transactions
+
     def get_balance(self, registry: TransactionRegistry) -> int:
-        """
-        TODO: Zwróć liczbę transakcji z wywołania get_unspent_transactions.
-        """
-        raise NotImplementedError()
+        unspent_transactions = self.get_unspent_transactions(registry)
+        return len(unspent_transactions)
 
     def sign_transaction(self, transaction: Transaction) -> SignedTransaction:
-        """
-        TODO: Podpisz transakcję kluczem prywatnym.
-        Korzystając z funkcji sign z simple_cryptography, stwórz podpis danej transakcji.
-        Następnie zwróc podpisaną transakcję jako obiekt klasy SignedTransaction.
-        """
-        raise NotImplementedError()
+        sign_transaction = sign(self._private_key, transaction.tx_hash)
+        return SignedTransaction.from_transaction(transaction, sign_transaction)
 
     def transfer(self, registry: TransactionRegistry, recipient: PublicKey) -> bool:
-        """
-        TODO: Przekaż coina do nowego właściciela.
-        - Znajdź dowolną niewykorzystaną transakcję, jeśli takiej nie ma, zwróć False.
-        - Stwórz nową transakcję, z podanym odbiorcą (recipient) oraz poprzednim hashem znalezionej transakcji.
-        - Podpisz nową transakcję korzystając z sign_transaction.
-        - Dodaj transakcję do rejestru.
-        - Zwróć True jeśli wszystko się udało, False w przeciwnym wypadku.
-        """
-        raise NotImplementedError()
+        unspent_transactions = self.get_unspent_transactions(registry)
+        if not unspent_transactions:
+            return False
+        unspent_transaction = self.get_unspent_transactions(registry)[0]
+        transfer_transaction = Transaction(recipient, unspent_transaction.tx_hash)
+        transfer_transaction = self.sign_transaction(transfer_transaction)
+        return registry.add_transaction(transfer_transaction)
+
+
+
+

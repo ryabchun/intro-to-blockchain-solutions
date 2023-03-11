@@ -21,8 +21,12 @@ class Block:
 
     @property
     def hash(self):
-        """
-        TODO: Oblicz hash bloku wykorzystując do tego funkcję `hash` z modułu simple_cryptography.
-        Hash powinien zawierać wszystkie składowe bloku.
-        """
-        raise NotImplementedError()
+        hashed = b"\x00"
+        for transaction in self.transactions:
+            hashed = hash(transaction.tx_hash + hashed)
+        return hash(
+            self.prev_block_hash
+            + self.timestamp.to_bytes(32, "big")
+            + self.nonce.to_bytes(32, "big")
+            + hashed
+        )

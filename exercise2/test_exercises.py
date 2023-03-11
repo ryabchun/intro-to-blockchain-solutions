@@ -29,7 +29,7 @@ def test_get_transaction():
 def test_is_transaction_spent():
     print(len(initial_transactions))
     new_transaction = Transaction(pub2, initial_transactions[0].tx_hash)
-    
+
     signature = sign(priv1, new_transaction.tx_hash)
 
     new_transaction = SignedTransaction.from_transaction(new_transaction, signature)
@@ -55,6 +55,7 @@ def test_add_transaction():
     assert reg.add_transaction(new_tx1)
     assert reg.add_transaction(new_tx2)
 
+
 def test_get_unspent_transactions():
     reg = TransactionRegistry(initial_transactions)
 
@@ -66,12 +67,14 @@ def test_get_unspent_transactions():
     assert initial_transactions[1] in txs
     assert initial_transactions[2] in txs
 
+
 def test_get_balance():
     reg = TransactionRegistry(initial_transactions)
 
     wallet = Wallet((pub1, priv1))
 
     assert wallet.get_balance(reg) == 3
+
 
 def test_transfer():
     reg = TransactionRegistry(initial_transactions)
@@ -83,6 +86,7 @@ def test_transfer():
 
     assert wallet1.get_balance(reg) == 2
     assert wallet2.get_balance(reg) == 4
+
 
 def test_sign_transaction():
     reg = TransactionRegistry(initial_transactions)

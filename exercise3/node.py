@@ -22,37 +22,38 @@ class Node:
     owner: PublicKey
 
     def __init__(self, owner_public_key: PublicKey, initial_transaction: Transaction):
-        """
-        TODO: Przypisz wartości polom owner oraz blockchain przy pomocy podanych argumentów.
-        Wykorzystaj `initial_transaction` do stworzenia blockchain (hash poprzedniego bloku i nonce powinny być zerem).
-        """
-        raise NotImplementedError()
+        block = Block(b"\x00", int(time()), 0, [initial_transaction])
+        self. blockchain = Blockchain([block])
+        self.owner = owner_public_key
+
 
     def add_transaction(self, transaction: SignedTransaction):
-        """
-        TODO: Dodaj podaną transakcję do bloku.
-        Sprawdź, czy transakcja jest poprawna (użyj metody `validate_transaction`), jeśli nie jest, rzuć wyjątek.
-        Stwórz transakcję generującą nowego coin'a, aby wynagrodzić właściciela node'a.
-        Stwórz nowy blok zawierający obie transakcje.
-        Znajdź nonce, który spełni kryteria sieci (użyj metody `find_nonce`).
-        Dodaj blok na koniec łańcucha.
-        """
-        raise NotImplementedError()
+        if not self.validate_transaction(transaction):
+            raise Exception("Verification failed")
+        new_transaction = Transaction(self.owner, b"\x00")
+        block = Block(prev_block_hash=self.blockchain.get_latest_block().hash, timestamp=int(time()), nonce=0,
+                      transactions=[transaction, new_transaction])
+        block = self.find_nonce(block)
+        self.blockchain.blocks.append(block)
+
 
     def find_nonce(self, block: Block) -> Optional[Block]:
-        """
-        TODO: Znajdź nonce spełniające kryterium -> hash bloku powinien mieć na początku `DIFFICULTY` zer.
-        """
-        raise NotImplementedError()
+        while int.from_bytes(block.hash, "big") >= MAX_256_INT >> DIFFICULTY:
+            block.nonce += 1
+
+        return block
 
     def validate_transaction(self, transaction: SignedTransaction) -> bool:
-        """
-        TODO: Sprawdź poprawność transakcji.
-        Transakcja jest poprawna, jeśli ma podpis, podpis jest poprawny oraz coin,
-        którego chcemy wydać, istnieje i nie został wcześniej wydany.
-        Skorzystaj z funkcji `verify_signature` z modułu simple_cryptography.
-        """
-        raise NotImplementedError()
+        if transaction.signature is None:
+            return False
+
+        prev_transaction = self.blockchain.get_transaction_by(tx_hash=transaction.previous_tx_hash)
+        if prev_transaction is None:
+            return False
+        if self.blockchain.get_transaction_by(previous_tx_hash=transaction.previous_tx_hash) is not None:
+            return False
+        return verify_signature(prev_transaction.recipient, transaction.signature, transaction.tx_hash)
+
 
     def get_state(self) -> Blockchain:
         """
@@ -62,14 +63,29 @@ class Node:
 
 
 def validate_chain(chain: Blockchain) -> bool:
-    """
-    TODO: Zweryfikuj poprawność łańcucha.
-    Łańcuch jest poprawny, jeśli dla każdego bloku (poza zerowym):
-    - hash poprzedniego bloku jest przypisany prawidłowo,
-    _ timestamp rośnie razem z numerem bloku,
-    - wykonano proof of work (hash bloku ma na początku `DIFFICULTY` zer),
-    - wszystkie transakcje w bloku są poprawne.
+    if len(chain.blocks[0].transactions) != 1:
+        return False
+    for index, block in enumerate(chain.blocks[1:]):
 
-    Pamiętaj, że w bloku istnieją transakcje tworzące nowe coiny!
-    """
-    raise NotImplementedError()
+        if block.prev_block_hash != chain.blocks[index].hash:
+            return False
+        if int.from_bytes(block.hash, "big") > MAX_256_INT >> DIFFICULTY:
+            return False
+        if block.timestamp < chain.blocks[index].timestamp:
+            return False
+
+        node = Node(generate_key_pair()[0], chain.blocks[0].transactions[0])
+        flag = False
+
+        for transaction in block.transactions:
+            if transaction.previous_tx_hash == b"\00":
+                if flag:
+                    return False
+                flag = True
+                continue
+
+            if not node.validate_transaction(transaction):
+                return False
+
+        node.blockchain.blocks.append(block)
+    return True

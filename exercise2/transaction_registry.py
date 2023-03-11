@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import Optional, List
 import copy
 
+
 @dataclass
 class Transaction:
     """
@@ -24,6 +25,7 @@ class Transaction:
     def __repr__(self):
         return f"Tx(recipient: {self.recipient.to_bytes()[-6:]}.., prev_hash: {self.previous_tx_hash[:6]}..)"
 
+
 @dataclass
 class SignedTransaction(Transaction):
     """
@@ -43,6 +45,7 @@ class SignedTransaction(Transaction):
     def __repr__(self):
         return f"SignedTx(recipient: {self.recipient.to_bytes()[-6:]}.., prev_hash: {self.previous_tx_hash[:6]}.., signature: {self.signature[:6]})"
 
+
 class TransactionRegistry:
     """
     Klasa reprezentująca publiczny rejestr transakcji. Odpowiada za przyjmowanie nowych transakcji i ich
@@ -54,36 +57,26 @@ class TransactionRegistry:
         self.transactions = copy.copy(initial_transactions)
 
     def get_transaction(self, tx_hash: bytes) -> Optional[Transaction]:
-        """
-        TODO: Znajdź transakcję z podanym tx_hash.
-        Jeśli istnieje transakcja z podanym tx_hash, zwróć ją, w przeciwnym przypadku zwróć None.
-        """
-        raise NotImplementedError()
+        for transaction in self.transactions:
+            if transaction.tx_hash == tx_hash:
+                return transaction
+        return None
 
     def is_transaction_spent(self, tx_hash: bytes) -> bool:
-        """
-        TODO: Sprawdź czy transakcja o podanym hashu została wykorzystana.
-        Tj. sprawdź czy istnieje inna transakcja dla której ta transakcja jest
-        wcześniejszą transakcją. (pole previous_tx_hash).
-        """
-        raise NotImplementedError()
+        for transaction in self.transactions:
+            if transaction.previous_tx_hash == tx_hash:
+                return True
+        return False
 
     def verify_transaction_signature(self, transaction: SignedTransaction) -> bool:
-        """
-        TODO: Zweryfikuj podpis transakcji.
-        Sprawdź czy dana transakcja została podpisana przez właściciela (klucz publiczny) poprzedniej transakcji.
-        Do weryfikacji podpisu wykorzystaj funkcję verify_signature z simple_cryptography.
-        Przypomnienie: podpisywany jest hash transakcji.
-        """
-        raise NotImplementedError()
+        if self.get_transaction(transaction.previous_tx_hash) is None:
+            return False
+        return verify_signature(self.get_transaction(transaction.previous_tx_hash).recipient, transaction.signature,
+                                transaction.tx_hash)
 
     def add_transaction(self, transaction: SignedTransaction) -> bool:
-        """
-        TODO: Dodaj nową transakcję do listy transakcji.
-        Przed dodaniem upewnij się, że:
-        - poprzednia transakcja nie została wykorzystana
-        - podpis transakcji się zgadza
-        wykorzystaj do tego dwie metody powyżej.
-        Zwróć True jeśli dodanie transakcji przebiegło pomyślnie, False w przeciwnym wypadku.
-        """
-        raise NotImplementedError()
+        if self.is_transaction_spent(transaction) or not self.verify_transaction_signature(transaction):
+            return False
+        else:
+            self.transactions.append(transaction)
+            return True

@@ -67,6 +67,7 @@ def sign(private_key: PrivateKey, message: bytes) -> bytes:
     )
     return signature
 
+
 def verify_signature(public_key: PublicKey, signature: bytes, message: bytes) -> bool:
     try:
         public_key.value.verify(
